@@ -844,6 +844,18 @@ function ejsSendRefuse(r, messageRefus) {
         <button onclick="saveAvisLink()" style="background:var(--lav-d);color:#fff;border:none;padding:10px 22px;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;">💾 Enregistrer</button>
       </div>
       <div id="ar-link-msg" style="font-size:.8rem;margin-top:8px;min-height:18px;"></div>
+
+      <hr style="border:none;border-top:1px solid var(--border);margin:18px 0;">
+      <p style="font-size:.9rem;font-weight:700;color:var(--text);margin-bottom:4px;">⭐ Nombre d'avis Google affiché sur le site</p>
+      <p style="font-size:.83rem;color:var(--muted);margin:4px 0 12px;line-height:1.6;">
+        Indiquez le <strong>vrai nombre d'avis</strong> que vous avez sur Google. Il sera synchronisé <strong>partout sur le site</strong> (accueil, avis, réservation…) — les « 41 avis » deviendront ce chiffre automatiquement.
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <input id="ar-count" type="number" min="0" placeholder="ex : 47" style="width:120px;padding:10px 12px;border:1.5px solid var(--border);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:.9rem;background:var(--bg);color:var(--text);text-align:center;font-weight:700;">
+        <span style="font-size:.85rem;color:var(--muted);">avis</span>
+        <button onclick="saveReviewCount()" style="background:var(--lav-d);color:#fff;border:none;padding:10px 22px;border-radius:10px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.85rem;cursor:pointer;">💾 Synchroniser</button>
+      </div>
+      <div id="ar-count-msg" style="font-size:.8rem;margin-top:8px;min-height:18px;"></div>
     </div>
 
     <!-- Zone active (visible une fois le lien enregistré) -->
@@ -2420,7 +2432,23 @@ function loadAvisRequest(){
     var inp = document.getElementById('ar-link'); if(inp) inp.value = ar_link;
     ar_applyLink();
   });
+  // Nombre d'avis affiché sur le site
+  _db.ref('site_config/reviews/count').once('value').then(function(s){
+    var c = s.val(); var el = document.getElementById('ar-count');
+    if(el && c) el.value = c;
+  }).catch(function(){});
 }
+
+function saveReviewCount(){
+  var inp = document.getElementById('ar-count');
+  var msg = document.getElementById('ar-count-msg');
+  var n = parseInt(inp.value);
+  if(!n || n < 1){ msg.style.color='#c0392b'; msg.textContent='Entrez un nombre d\'avis valide.'; return; }
+  _db.ref('site_config/reviews/count').set(n).then(function(){
+    msg.style.color='#2e9e5b'; msg.textContent='✓ Synchronisé — le site affiche maintenant '+n+' avis partout.';
+  }).catch(function(e){ msg.style.color='#c0392b'; msg.textContent='Erreur : '+(e&&e.message||''); });
+}
+window.saveReviewCount = saveReviewCount;
 
 function saveAvisLink(){
   var inp = document.getElementById('ar-link');
