@@ -1202,7 +1202,7 @@ var _caChartInst = null;
 
 // ═══ TARIFS PILOTABLES — source unique (site_config/tarifs), synchro temps réel ═══
 var TARIF_DEFAULTS = {pension:25, garderie:20, demi:10, promenade:15, toilettage:30, visite:15, remise2:10, remise3:15, packDuo:33,
-  deplFixe:5, deplKm:0.5,
+  deplMiramas:10, deplFixe:5, deplKm:0.5,
   vChien:15, vChat:12, vFuret:13, vPoules:13, vLapin:10, vRongeur:10, vOiseau:10, vTortue:10, vPoisson:8, vSupp1h:5};
 window._TARIFS = null;
 function getTarifs(){ var t={}; for(var k in TARIF_DEFAULTS) t[k]=TARIF_DEFAULTS[k]; if(window._TARIFS){ for(var k2 in window._TARIFS){ if(window._TARIFS[k2]!=null) t[k2]=Number(window._TARIFS[k2]); } } return t; }
@@ -2097,7 +2097,8 @@ var TARIF_META = [
   {k:'promenade', label:'🦮 Promenade',             unit:'€'},
   {k:'toilettage',label:'🛁 Toilettage',            unit:'€'},
   {grp:'Frais de déplacement (récupération & visites)'},
-  {k:'deplFixe',  label:'🚗 Forfait de déplacement', unit:'€'},
+  {k:'deplMiramas',label:'🚗 Forfait à Miramas',       unit:'€'},
+  {k:'deplFixe',  label:'🚗 Forfait hors Miramas',    unit:'€'},
   {k:'deplKm',    label:'🚗 Prix au kilomètre (aller-retour)', unit:'€ / km', step:0.1},
   {grp:'Visite à domicile — prix par animal (30 min)'},
   {k:'vChien',    label:'🐶 Chien',                  unit:'€'},
