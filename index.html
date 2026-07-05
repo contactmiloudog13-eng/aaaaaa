@@ -3437,16 +3437,64 @@ function saveNewClient() {
 }
 function deleteManualClient(e, key, tel, prenom, nom) {
   e.stopPropagation();
-  if (!confirm('Supprimer définitivement cette fiche client ?\n\nCette action est irréversible.')) return;
-  if (key) _db.ref('manual_clients/'+key).remove();
-  // Utiliser exactement la même logique de clé que dans buildClients et renderClients
+  // Normalisation téléphone (identique à buildClients) pour les correspondances
+  var normTel = function(t){ return (t||'').replace(/\D/g,'').replace(/^33/,'').replace(/^0/,''); };
+  // Retrouve la fiche complète (pour l'e-mail, indispensable au ménage Firebase)
+  var c = (allClients||[]).find(function(x){
+    return (key && x._manualKey === key) || (tel && x.tel === tel) ||
+           (((x.prenom||'') === prenom) && ((x.nom||'') === nom) && (prenom||nom));
+  }) || { tel:tel, prenom:prenom, nom:nom, email:'' };
+  var email = (c.email||'').trim().toLowerCase();
+  var nTel  = normTel(c.tel || tel);
+
+  if (!confirm('SUPPRIMER DÉFINITIVEMENT ce client de Firebase ?\n\n'
+    + ((prenom||'')+' '+(nom||'')).trim() + '\n\n'
+    + 'Cela efface sa fiche, son profil, ses chiens ET ses réservations.\n'
+    + 'Action irréversible.')) return;
+
+  var jobs = [];
+  // 1) Fiche saisie manuellement
+  if (key) jobs.push(_db.ref('manual_clients/'+key).remove());
+  // 2) Fiches persistantes /clients/*
+  Object.entries(window._clientsDb || {}).forEach(function(en){
+    var k = en[0], cc = en[1] || {};
+    var ct = normTel(cc.telephone), ce = (cc.email||'').trim().toLowerCase();
+    var samePN = ((cc.prenom||'') === prenom) && ((cc.nom||'') === nom) && (prenom||nom);
+    if ((nTel && ct && ct === nTel) || (email && ce && ce === email) || samePN) {
+      jobs.push(_db.ref('clients/'+k).remove());
+    }
+  });
+  // 3) Comptes /users/* (best-effort : dépend des règles ; sinon la fiche reste
+  //    juste masquée côté admin grâce à hidden_clients ci-dessous)
+  var uidsDropped = {};
+  Object.entries(window._firebaseUsers || {}).forEach(function(en){
+    var uid = en[0], u = en[1] || {};
+    var ut = normTel(u.tel || u.telephone), ue = (u.email||'').trim().toLowerCase();
+    if ((nTel && ut && ut === nTel) || (email && ue && ue === email)) {
+      uidsDropped[uid] = 1;
+      jobs.push(_db.ref('users/'+uid).remove().catch(function(){}));
+    }
+  });
+  // 4) Réservations de ce client (sinon la fiche se recrée via persistClientsFromResas)
+  (window._fbResas || []).forEach(function(r){
+    var rt = normTel((r.client && r.client.telephone) || r['Téléphone'] || r.telephone || '');
+    var re = ((r.client && r.client.email) || r.email || r['Email'] || '').trim().toLowerCase();
+    var ru = r.userId || r._userId || '';
+    if ((nTel && rt && rt === nTel) || (email && re && re === email) || (ru && uidsDropped[ru])) {
+      if (r._id) jobs.push(_db.ref('reservations/'+r._id).remove());
+    }
+  });
+  // 5) Masquage (filet de sécurité UI) + nettoyage notes
   var hkey = sanitizeKey(tel || ((prenom||'')+(nom||'')) || key);
-  // On stocke la DATE de suppression (et non `true`) : ainsi le client réapparaît
-  // automatiquement s'il refait une réservation après avoir été supprimé.
-  _db.ref('hidden_clients/'+hkey).set(Date.now());
+  jobs.push(_db.ref('hidden_clients/'+hkey).set(Date.now()));
+  jobs.push(_db.ref('client_notes/'+hkey).remove());
   if (window._cachedNotes) delete window._cachedNotes[hkey];
-  _db.ref('client_notes/'+hkey).remove();
-  showToast('🗑️ Client supprimé');
+
+  Promise.all(jobs).then(function(){
+    showToast('🗑️ Client supprimé de Firebase');
+  }).catch(function(err){
+    showToast('⚠️ Supprimé partiellement : ' + (err && err.message || ''));
+  });
   allClients = buildClients(allData);
   renderClients(allClients);
 }
