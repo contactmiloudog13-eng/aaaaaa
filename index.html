@@ -4056,6 +4056,20 @@ function checkNewResas() {
 window._fbResas = [];
 var _refuseResaId = null;
 
+// Extrait le total (dernier « … € » du segment « Total ») du devis stocké sur la résa.
+function _fbResaTotal(prix) {
+  if (!prix) return '';
+  var parts = String(prix).split('|');
+  for (var i = 0; i < parts.length; i++) {
+    if (/total/i.test(parts[i])) {
+      var m = parts[i].match(/([0-9]+(?:[.,][0-9]+)?)\s*€/);
+      if (m) return m[1].replace(',', '.') + ' €';
+    }
+  }
+  var all = String(prix).match(/([0-9]+(?:[.,][0-9]+)?)\s*€/g);
+  return all ? all[all.length - 1] : '';
+}
+
 function fbStatutBadge(statut) {
   var map = {
     'en-attente': '<span class="status-badge statut-attente">🟡 En attente</span>',
@@ -4099,6 +4113,7 @@ function buildResaRow(r, colspan) {
     actions += '<button class="btn-undo" title="Remettre en attente" onclick="setFbStatus(\'' + safeRId + '\',\'en-attente\')">↩️</button>';
   }
   if (statut === 'confirmé') {
+    actions += '<button title="Créer la facture" onclick="facturerResa(\'' + safeRId + '\')" style="background:var(--lav-d);color:#fff;border:none;padding:5px 10px;border-radius:20px;font-size:.72rem;font-weight:700;cursor:pointer;">🧾 Facturer</button>';
     actions += '<button class="btn-undo" title="Journal de séjour (photos + notes pour le client)" onclick="openJournal(\'' + safeRId + '\',\'' + safeName + '\')">📔</button>';
     actions += '<button class="btn-undo" title="Demander un avis Google par WhatsApp" onclick="askReview(\'' + tel + '\',\'' + (prenom||'').replace(/'/g,'') + '\')">⭐</button>';
   }
@@ -4112,7 +4127,8 @@ function buildResaRow(r, colspan) {
     + (email ? '<br><span style="font-size:.68rem;color:var(--muted);">' + email + '</span>' : '')
     + '</td>'
     + '<td>🐕 ' + (chien.nom || '—') + '<br><span style="font-size:.72rem;color:var(--muted);">' + chienDetail + '</span></td>'
-    + '<td>' + serviceBadge(r.service || '') + '<br><span style="font-size:.72rem;color:var(--muted);">' + (r.nbChiens || '') + '</span></td>'
+    + '<td>' + serviceBadge(r.service || '') + '<br><span style="font-size:.72rem;color:var(--muted);">' + (r.nbChiens || '') + '</span>'
+      + (_fbResaTotal(r.prix) ? '<br><span style="font-size:.82rem;font-weight:800;color:var(--vert,#2e9e5b);">💶 ' + _fbResaTotal(r.prix) + '</span>' : '') + '</td>'
     + '<td>' + dates + (heures ? '<br><span style="font-size:.7rem;color:var(--muted);">' + heures + '</span>' : '') + '</td>'
     + '<td style="max-width:140px;font-size:.78rem;color:var(--muted);">' + msgCourt + '</td>'
     + '<td>' + fbStatutBadge(statut) + '</td>'
@@ -4126,6 +4142,8 @@ function buildResaRow(r, colspan) {
     + '<div><label>Âge chien</label>' + (chien.age || '—') + '</div>'
     + '<div><label>Poids chien</label>' + (chien.poids ? chien.poids + ' kg' : '—') + '</div>'
     + '<div><label>Parrainage</label>' + (r.parrainage || '—') + '</div>'
+    + (r.prix ? '<div style="grid-column:1/-1;"><label>💶 Devis / Prix</label><span style="font-size:.82rem;line-height:1.6;">' + String(r.prix).replace(/\|/g,'<br>') + '</span></div>' : '')
+    + (r.carnetMalin && r.carnetMalin.nuitsDeduites ? '<div style="grid-column:1/-1;"><label>🎟️ Carnet Malin</label><span style="font-size:.82rem;color:var(--lav-d);font-weight:700;">' + r.carnetMalin.nuitsDeduites + ' jour(s) déduit(s)' + (r.carnetMalin.applied ? ' ✅' : ' (à l\'acceptation)') + '</span></div>' : '')
     + '<div style="grid-column:1/-1;"><label>Message complet</label><span style="font-size:.82rem;">' + (r.message || '—') + '</span></div>'
     + (r.messageRefus ? '<div style="grid-column:1/-1;"><label>Message de refus envoyé</label><span style="color:var(--rouge);font-size:.82rem;">' + r.messageRefus + '</span></div>' : '')
     + '</div>'
