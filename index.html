@@ -2404,19 +2404,25 @@ loadMailing=function(){ _mlLoadMailingOrig(); try{ mlLoadAnnonces(); }catch(e){}
 window.loadMailing=loadMailing;window.mlCopyEmails=mlCopyEmails;window.mlCopyAll=mlCopyAll;window.mlOpenMail=mlOpenMail;
 window.mlPublishAccount=mlPublishAccount;window.mlLoadAnnonces=mlLoadAnnonces;window.mlDeleteAnnonce=mlDeleteAnnonce;
 
-/* ═══ Menu réorganisable par GLISSER-DÉPOSER (ordre mémorisé par espace) ═══ */
+/* ═══ Menu réorganisable par GLISSER-DÉPOSER (items ET catégories, ordre mémorisé par espace) ═══ */
 (function(){
   var GROUPS = ['nav-grp-dogs','nav-grp-pets'];
-  function items(gid){ var g=document.getElementById(gid); return g ? [].slice.call(g.querySelectorAll('.nav-item')) : []; }
-  function keyOf(el){ return el.getAttribute('onclick') || el.textContent.trim(); }
-  function saveOrder(gid){ try{ localStorage.setItem('navOrder_'+gid, JSON.stringify(items(gid).map(keyOf))); }catch(e){} }
+  var SEL = '.nav-item, .nav-sep';   // on déplace les boutons ET les titres de catégorie
+  function kids(gid){ var g=document.getElementById(gid); return g ? [].slice.call(g.querySelectorAll(SEL)) : []; }
+  function keyOf(el){
+    if(el.classList.contains('nav-sep')) return 'sep:'+el.textContent.trim();
+    return el.getAttribute('onclick') || el.textContent.trim();
+  }
+  // Nouvelle clé de stockage (navOrder2_) : invalide l'ancien ordre cassé qui envoyait tout dans « Outils ».
+  function saveOrder(gid){ try{ localStorage.setItem('navOrder2_'+gid, JSON.stringify(kids(gid).map(keyOf))); }catch(e){} }
   function applyOrder(gid){
     var g=document.getElementById(gid); if(!g) return;
-    var saved; try{ saved=JSON.parse(localStorage.getItem('navOrder_'+gid)||'null'); }catch(e){ saved=null; }
+    var saved; try{ saved=JSON.parse(localStorage.getItem('navOrder2_'+gid)||'null'); }catch(e){ saved=null; }
     if(!saved || !saved.length) return;
-    var its=items(gid), byKey={}; its.forEach(function(el){ byKey[keyOf(el)]=el; });
+    var list=kids(gid), byKey={}; list.forEach(function(el){ if(byKey[keyOf(el)]===undefined) byKey[keyOf(el)]=el; });
+    // On réordonne TOUS les enfants (séparateurs inclus) dans l'ordre sauvegardé.
     saved.forEach(function(k){ if(byKey[k]){ g.appendChild(byKey[k]); delete byKey[k]; } });
-    its.forEach(function(el){ if(byKey[keyOf(el)]) g.appendChild(el); }); // nouveaux items → à la fin
+    list.forEach(function(el){ if(byKey[keyOf(el)]) g.appendChild(el); }); // nouveautés → à la fin
   }
 
   var _on=false, _drag=null;
@@ -2431,7 +2437,7 @@ window.mlPublishAccount=mlPublishAccount;window.mlLoadAnnonces=mlLoadAnnonces;wi
     }
     if(hint) hint.style.display=_on?'inline':'none';
     GROUPS.forEach(function(gid){
-      items(gid).forEach(function(el){
+      kids(gid).forEach(function(el){
         if(_on){
           el.setAttribute('draggable','true');
           el.classList.add('nav-draggable');
@@ -2448,15 +2454,15 @@ window.mlPublishAccount=mlPublishAccount;window.mlLoadAnnonces=mlLoadAnnonces;wi
   // Handlers de glisser-déposer (délégués sur tout le document)
   document.addEventListener('dragstart', function(e){
     if(!_on) return;
-    var el=e.target.closest && e.target.closest('.nav-item'); if(!el) return;
+    var el=e.target.closest && e.target.closest(SEL); if(!el) return;
     _drag=el; el.classList.add('nav-drag-ghost');
     try{ e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','x'); }catch(_){}
   });
   document.addEventListener('dragover', function(e){
     if(!_on || !_drag) return;
-    var over=e.target.closest && e.target.closest('.nav-item');
+    var over=e.target.closest && e.target.closest(SEL);
     if(!over || over===_drag) return;
-    var g=over.parentNode; if(_drag.parentNode!==g) return; // reste dans le même groupe
+    var g=over.parentNode; if(_drag.parentNode!==g) return; // reste dans le même espace (dogs/pets)
     e.preventDefault();
     var r=over.getBoundingClientRect();
     var before=(e.clientY - r.top) < r.height/2;
@@ -2472,7 +2478,7 @@ window.mlPublishAccount=mlPublishAccount;window.mlLoadAnnonces=mlLoadAnnonces;wi
   // En mode réorg, un clic ne doit pas naviguer (sinon on quitte la vue en glissant)
   document.addEventListener('click', function(e){
     if(!_on) return;
-    var el=e.target.closest && e.target.closest('.nav-item');
+    var el=e.target.closest && e.target.closest(SEL);
     if(el && el!==document.getElementById('nav-reorder-btn')){ e.preventDefault(); e.stopPropagation(); }
   }, true);
 
@@ -2480,9 +2486,10 @@ window.mlPublishAccount=mlPublishAccount;window.mlLoadAnnonces=mlLoadAnnonces;wi
     GROUPS.forEach(applyOrder);
     if(!document.getElementById('nav-drag-css')){
       var st=document.createElement('style'); st.id='nav-drag-css';
-      st.textContent='.nav-item.nav-draggable{outline:1px dashed rgba(255,255,255,.25);outline-offset:-3px;border-radius:10px;}'
-        +'.nav-item.nav-drag-ghost{opacity:.45;background:rgba(232,168,76,.25);}'
-        +'.nav-item.nav-draggable:active{cursor:grabbing!important;}';
+      st.textContent='.nav-item.nav-draggable,.nav-sep.nav-draggable{outline:1px dashed rgba(255,255,255,.25);outline-offset:-3px;border-radius:10px;}'
+        +'.nav-sep.nav-draggable{cursor:grab;background:rgba(255,255,255,.04);}'
+        +'.nav-item.nav-drag-ghost,.nav-sep.nav-drag-ghost{opacity:.45;background:rgba(232,168,76,.25);}'
+        +'.nav-draggable:active{cursor:grabbing!important;}';
       document.head.appendChild(st);
     }
   }
