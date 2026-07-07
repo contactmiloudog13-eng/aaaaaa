@@ -1262,7 +1262,8 @@ var _caChartInst = null;
 // ═══ TARIFS PILOTABLES — source unique (site_config/tarifs), synchro temps réel ═══
 var TARIF_DEFAULTS = {pension:25, garderie:20, demi:10, promenade:15, toilettage:30, visite:15, remise2:10, remise3:15, packDuo:33,
   deplMiramas:10, deplFixe:5, deplKm:0.5,
-  vChien:15, vChat:12, vFuret:13, vPoules:13, vLapin:10, vRongeur:10, vOiseau:10, vTortue:10, vPoisson:8, vSupp1h:5};
+  vChien:15, vChat:12, vFuret:13, vPoules:13, vLapin:10, vRongeur:10, vOiseau:10, vTortue:10, vPoisson:8, vSupp1h:5,
+  carnetNights:10, carnetRemise:10};
 window._TARIFS = null;
 function getTarifs(){ var t={}; for(var k in TARIF_DEFAULTS) t[k]=TARIF_DEFAULTS[k]; if(window._TARIFS){ for(var k2 in window._TARIFS){ if(window._TARIFS[k2]!=null) t[k2]=Number(window._TARIFS[k2]); } } return t; }
 
@@ -2173,7 +2174,10 @@ var TARIF_META = [
   {grp:'Remises'},
   {k:'remise2',   label:'🎉 Réduction 2 chiens',     unit:'%'},
   {k:'remise3',   label:'🎉 Réduction 3 chiens et +', unit:'%'},
-  {k:'packDuo',   label:'🎁 Remise Pack Duo (visites)', unit:'%'}
+  {k:'packDuo',   label:'🎁 Remise Pack Duo (visites)', unit:'%'},
+  {grp:'Carnet Malin'},
+  {k:'carnetNights', label:'🎟️ Nombre de jours du carnet', unit:'jours'},
+  {k:'carnetRemise', label:'💸 Remise du carnet',           unit:'%'}
 ];
 function renderTarifsEditor(){
   var box = document.getElementById('tarifs-editor');
@@ -2257,11 +2261,12 @@ function renderCarnetsAdmin(){
   }).join('') : '<div style="color:var(--muted);font-size:.85rem;padding:8px;">Aucun carnet actif.</div>';
 }
 function activateCarnet(uid,prix){
-  if(!confirm('Activer le Carnet Malin (10 nuits) pour ce client ?\nLe paiement est bien reçu ?')) return;
+  var _nights=(getTarifs().carnetNights)||10;
+  if(!confirm('Activer le Carnet Malin ('+_nights+' jours) pour ce client ?\nLe paiement est bien reçu ?')) return;
   var now=Date.now();
   var r=(window._carnetReqs||{})[uid]||{};
   if(window._carnetArchiving) window._carnetArchiving[uid]=false;
-  _db.ref('carnets/'+uid).set({ nights:10, usages:{}, status:'actif', prix:prix||0, activatedAt:now, expiresAt:now+365*86400000,
+  _db.ref('carnets/'+uid).set({ nights:_nights, usages:{}, status:'actif', prix:prix||0, activatedAt:now, expiresAt:now+365*86400000,
     prenom:r.prenom||'', nom:r.nom||'', email:r.email||'', telephone:r.telephone||'' })
     .then(function(){ _db.ref('carnet_requests/'+uid+'/status').set('active'); if(window.showToast)showToast('🎟️ Carnet activé !'); })
     .catch(function(e){ alert('Erreur : '+e.message); });
