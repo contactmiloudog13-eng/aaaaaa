@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,viewport-fit=cover">
 <title>Admin – Milou Dogs Provence</title>
 <meta name="theme-color" content="#7F77DD">
 <meta name="mobile-web-app-capable" content="yes">
@@ -62,6 +62,34 @@ h1,h2,h3{font-family:'Playfair Display',serif;}
   .detail-grid{grid-template-columns:1fr;}
   [style*="grid-template-columns:1fr 1fr"]{grid-template-columns:1fr!important;}
   [style*="grid-template-columns:420px 1fr"]{grid-template-columns:1fr!important;}
+}
+/* ═══ MODE APPLICATION MOBILE (anti-zoom, plein écran, nav en barre) ═══ */
+@media(max-width:900px){
+  /* 1) iOS ne zoome plus au focus : tous les champs ≥ 16px */
+  input,select,textarea,.search-bar,button{font-size:16px!important;}
+  /* 2) jamais de débordement horizontal (sinon la page paraît dézoomée) */
+  html,body{max-width:100%;overflow-x:hidden;}
+  .shell,.main,.panel,.view{max-width:100%;min-width:0;}
+  img,table,pre,canvas{max-width:100%;}
+  /* 3) barre de navigation = onglets défilables sur une seule ligne, collée en haut */
+  .sidebar{position:sticky;top:0;z-index:60;flex-wrap:nowrap!important;overflow-x:auto;overflow-y:hidden;
+           -webkit-overflow-scrolling:touch;padding:8px 10px;gap:6px;scrollbar-width:none;
+           box-shadow:0 2px 10px rgba(0,0,0,.12);}
+  .sidebar::-webkit-scrollbar{display:none;}
+  .sidebar-logo{flex-shrink:0;white-space:nowrap;}
+  .nav-item{flex-shrink:0;white-space:nowrap;min-height:40px;}
+  /* 4) cibles tactiles plus grandes + confort de lecture */
+  .refresh-btn,.filter-btn{min-height:38px;}
+  .nav-item .badge,.badge{white-space:nowrap;}
+}
+@media(max-width:560px){
+  .main{padding:14px 12px;}
+  .topbar h1{font-size:1.25rem;}
+  /* boutons du haut : pleine largeur pour être faciles à toucher */
+  .topbar-right{width:100%;}
+  .topbar-right .refresh-btn{flex:1;text-align:center;}
+  /* modales / cartes : plein écran confortable */
+  .modal,.modal-card,[class*="modal"]>div{max-width:100%!important;width:100%!important;border-radius:16px!important;}
 }
 .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px;}
 .topbar h1{font-size:1.7rem;color:var(--lav-d);}
