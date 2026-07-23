@@ -1135,6 +1135,7 @@ function ejsSendRefuse(r, messageRefus) {
         <!-- Actions -->
         <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
           <button class="refresh-btn" onclick="mpExportCSV()" style="border:1.5px solid #4A3F8F;color:#4A3F8F;background:#fff;">📤 Export comptable (CSV)</button>
+          <button class="refresh-btn" onclick="mpDac7()" style="border:1.5px solid #B8860B;color:#8a6508;background:#fff;" title="Déclaration annuelle des revenus des gardiens au fisc (obligatoire avant le 31 janvier)">🏛️ Export fiscal DAC7</button>
           <button class="refresh-btn" onclick="mpOpenBroadcast('gardiens')" style="border:1.5px solid #7C6FE0;color:#7C6FE0;background:#fff;">📣 Message à tous les gardiens</button>
           <button class="refresh-btn" onclick="mpOpenBroadcast('clients')" style="border:1.5px solid #2EBD8E;color:#159067;background:#fff;">📣 Message à tous les clients</button>
         </div>
@@ -6642,6 +6643,36 @@ document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeIm
     fn({ gardienId:gardienId, resaId:resaId }).then(function(){
       if(window.showToast) showToast('💶 Remboursement effectué');
       mpLoadData();
+    }).catch(function(e){ alert('Erreur : '+e.message); status('Erreur'); });
+  };
+
+  // Export DAC7 : revenus annuels des gardiens à déclarer au fisc (avant le 31 janvier N+1)
+  window.mpDac7 = function(){
+    var year = prompt('Année à déclarer (revenus des gardiens) :', String(new Date().getFullYear()-1));
+    if(!year) return;
+    year = parseInt(year,10);
+    if(!year || year<2024){ alert('Année invalide.'); return; }
+    status('Génération DAC7 '+year+'…');
+    var fn = window._mpApp.functions('europe-west1').httpsCallable('mpDac7Export');
+    fn({ year:year }).then(function(res){
+      var rows = (res.data && res.data.rows) || [];
+      if(!rows.length){ alert('Aucun revenu gardien à déclarer pour '+year+'.'); status(''); return; }
+      var esc = function(v){ v=(v==null?'':String(v)); return '"'+v.replace(/"/g,'""')+'"'; };
+      var head = ['Nom','Date naissance','Adresse','Pays','NIF','Email','Montant total (€)','Nb prestations','Compte Stripe','UID'];
+      var lines = [head.map(esc).join(';')];
+      rows.forEach(function(r){
+        lines.push([r.nom||r.nomProfil||'', r.dateNaissance||'', r.adresse||'', r.pays||'', r.nif||'NON COLLECTÉ', r.email||'', (r.montantTotal||0), r.nbPrestations||0, r.stripeAccount||'', r.uid||''].map(esc).join(';'));
+      });
+      var csv = '﻿'+lines.join('\r\n');
+      var blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'DAC7_gardiens_'+year+'.csv';
+      a.click();
+      var manquants = rows.filter(function(r){ return !r.nif; }).length;
+      if(window.showToast) showToast('📄 DAC7 '+year+' : '+rows.length+' gardien(s) exporté(s)');
+      status('');
+      if(manquants>0){ alert('⚠️ '+manquants+' gardien(s) sans NIF (numéro fiscal).\n\nActive « Tax reporting / DAC7 » dans le dashboard Stripe (Settings → Connect) pour que Stripe collecte le NIF à l\'inscription. Les gardiens déjà inscrits devront le renseigner.'); }
     }).catch(function(e){ alert('Erreur : '+e.message); status('Erreur'); });
   };
 
